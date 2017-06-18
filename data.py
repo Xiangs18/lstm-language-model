@@ -71,12 +71,13 @@ class DataSet:
         lengths = [self.sentence[x].size(0) for x in range(self.batch_size * batch_idx, self.batch_size * (batch_idx + 1))]
         max_len = max(lengths)
         
+        sorted_lengths = sorted(enumerate(lengths), key=lambda x: x[1], reverse=True)
         batch_data = torch.zeros(self.batch_size, max_len)
         for i in range(self.batch_size):
-            sequence_idx = i + self.batch_size * batch_idx
-            batch_data[i].narrow(0, 0, lengths[i]).copy_(self.sentence[sequence_idx])
+            sequence_idx = sorted_lengths[i][0] + self.batch_size * batch_idx
+            batch_data[i].narrow(0, 0, sorted_lengths[i][1]).copy_(self.sentence[sequence_idx])
 
-        return Variable(batch_data.t()), lengths
+        return Variable(batch_data.t()), [x[1] for x in sorted_lengths]
 
 
     def __getitem__(self, index):
