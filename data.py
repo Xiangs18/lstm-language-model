@@ -50,13 +50,13 @@ class DataSet:
         print('Vocabulary size : %d'%self.num_vocb)
         print('Finishing loading data in %f s.'%(time.time()-start_time))
         
-        print('Save dictionary at %s.dict'%datapath)
+        print('Save dictionary at %s.dict.pt'%datapath)
 
         with open(datapath + '.dict', 'w+') as f:
             for token, number in self.dictionary.iteritems():
                 f.write('%s %d\n'%(token,number))
 
-        
+
         self.num_batch = int(len(self.sentence) / self.batch_size)
 
         self.shuffle = range(self.__len__())
@@ -70,14 +70,30 @@ class DataSet:
     def get_batch(self, batch_idx):
         lengths = [self.sentence[x].size(0) for x in range(self.batch_size * batch_idx, self.batch_size * (batch_idx + 1))]
         max_len = max(lengths)
-        
-        sorted_lengths = sorted(enumerate(lengths), key=lambda x: x[1], reverse=True)
-        batch_data = torch.zeros(self.batch_size, max_len)
-        for i in range(self.batch_size):
-            sequence_idx = sorted_lengths[i][0] + self.batch_size * batch_idx
-            batch_data[i].narrow(0, 0, sorted_lengths[i][1]).copy_(self.sentence[sequence_idx])
+        total_len = sum(lengths)
 
-        return Variable(batch_data.t()), [x[1] for x in sorted_lengths]
+        sorted_lengths = sorted(enumerate(lengths), key=lambda x: x[1], reverse=True)
+        
+        batch_data = torch.LongTensor(self.batch_size, max_len)
+        batch_data.zero_()
+
+        target_words = torch.FloatTensor(total_len, self.num_vocb)
+        target_words.zero_()
+        
+        target_offset = 0
+        for i in range(self.batch_size):
+            len_ = sorted_lengths[i][1] 
+            idx_ = sorted_lengths[i][0]
+
+            sequence_idx = idx_ + self.batch_size * batch_idx
+            batch_data[i].narrow(0, 0, len_).copy_(self.sentence[sequence_idx])
+            
+            target_words.narrow(0, target_offset + 1, len_ - 1).scatter_(1, batch_data[i].narrow(0, 1, len_ - 1).view(-1, 1), 1.0)
+            target_offset += len_
+
+        return Variable(batch_data.t()), \
+                Variable(torch.LongTensor([x[1] for x in sorted_lengths]).contiguous()), \
+                Variable(target_words)
 
 
     def __getitem__(self, index):
@@ -90,9 +106,9 @@ class DataSet:
 if __name__ == '__main__':
     test_data_path = 'data/penn/test.txt'
     test_dataset = DataSet(test_data_path, batch_size = 64)
-    batch_data,_ = test_dataset[0]
-    #print(batch_data.data)
+    batch_data,_,target = test_dataset[0]
+    print(target.data.size())
     for i in range(len(test_dataset)):
-        batch_data, lengths = test_dataset[i]
+        batch_data, lengths, target = test_dataset[i]
         #print(batch_data.size())
         
