@@ -11,9 +11,10 @@ class DataSet:
         self.frequency = {}
         self.sentence = []
         self.batch_size = batch_size
+        self.datapath = datapath
 
-
-        print('Loading data and built dictionaryfrom %s ...'%datapath)
+        print('='*89)
+        print('Loading data and preprocess data from %s ...'%datapath)
         start_time = time.time()
         # Build dictionary
         with open(datapath, 'r') as f:
@@ -43,14 +44,9 @@ class DataSet:
                 sequence = [self.dictionary[token] for token in tokens]
                 self.sentence.append(torch.LongTensor(sequence))
         
-        print('Data discription:')
-        print('Data name : %s'%datapath)
-        print('Number of sentence : %d'%len(self.sentence))
-        print('Number of tokens : %d'%self.num_tokens)
-        print('Vocabulary size : %d'%self.num_vocb)
-        print('Finishing loading data in %f s.'%(time.time()-start_time))
+        print('Finishing loading and preprocessing data in %f s.'%(time.time()-start_time))
         
-        print('Save dictionary at %s.dict.pt'%datapath)
+        print('Save dictionary at %s.dict'%datapath)
 
         with open(datapath + '.dict', 'w+') as f:
             for token, number in self.dictionary.iteritems():
@@ -62,6 +58,16 @@ class DataSet:
         self.shuffle = range(self.__len__())
         random.shuffle(self.shuffle)
 
+        self.describe_dataset()
+
+    def describe_dataset(self):
+        print('='*89)
+        print('Data discription:')
+        print('Data name : %s'%self.datapath)
+        print('Number of batches : %d'%self.num_batch)
+        print('Number of sentence : %d'%len(self.sentence))
+        print('Number of tokens : %d'%self.num_tokens)
+        print('Vocabulary size : %d'%self.num_vocb)
 
     def shuffle_batch(self):
         self.shuffle(self.shuffle)
@@ -77,23 +83,29 @@ class DataSet:
         batch_data = torch.LongTensor(self.batch_size, max_len)
         batch_data.zero_()
 
-        target_words = torch.FloatTensor(total_len, self.num_vocb)
-        target_words.zero_()
+        #target_words = torch.FloatTensor(total_len, self.num_vocb)
+        #target_words.zero_()
+        #target_offset = 0
         
-        target_offset = 0
+        target_words = torch.LongTensor(self.batch_size, max_len)
+        target_words.zero_()
+
         for i in range(self.batch_size):
             len_ = sorted_lengths[i][1] 
             idx_ = sorted_lengths[i][0]
 
             sequence_idx = idx_ + self.batch_size * batch_idx
             batch_data[i].narrow(0, 0, len_).copy_(self.sentence[sequence_idx])
-            
-            target_words.narrow(0, target_offset + 1, len_ - 1).scatter_(1, batch_data[i].narrow(0, 1, len_ - 1).view(-1, 1), 1.0)
-            target_offset += len_
+            target_words[i].narrow(0, 1, len_ - 1 ).copy_(self.sentence[sequence_idx][1:])
 
+            #one hot
+            #target_words.narrow(1, i, 1).narrow(0, 1, len_ - 1).squeeze().scatter_(1, batch_data[i].narrow(0, 1, len_ - 1).view(-1, 1), 1)
+    
+
+            
         return Variable(batch_data.t()), \
-                Variable(torch.LongTensor([x[1] for x in sorted_lengths]).contiguous()), \
-                Variable(target_words)
+                Variable(torch.LongTensor([x[1] for x in sorted_lengths])), \
+                Variable(target_words.t().contiguous().view(-1))
 
 
     def __getitem__(self, index):
@@ -110,5 +122,6 @@ if __name__ == '__main__':
     print(target.data.size())
     for i in range(len(test_dataset)):
         batch_data, lengths, target = test_dataset[i]
-        #print(batch_data.size())
+        #if(lengths.data.min() <=0):
+        print(lengths.contiguous().data.view(-1).tolist())
         

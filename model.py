@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence as pack
@@ -7,6 +8,7 @@ class LanguageModel(nn.Module):
         super(LanguageModel, self).__init__()
         self.rnn_layers = num_layers
         self.dim_rnn = dim_rnn
+        self.num_layers = num_layers
 
         self.dropout = nn.Dropout(dropout_rate)
         self.word_lut = nn.Embedding(voc_size, dim_word)
@@ -20,13 +22,18 @@ class LanguageModel(nn.Module):
         self.output.weight.data.normal_(mean=0, std=std)
 
     def forward(self, inputs, lengths):
-        lengths = lengths.data.view(-1).tolist()
-        inputs = pack(inputs, lengths)
+        lengths = lengths.contiguous().data.view(-1).tolist()
+        
+        #hidden = self.init_hidden(inputs.data.size(1))
+        hidden = None
+
         emb = self.dropout(self.word_lut(inputs))
-        hidden = self.init_hidden(inputs.data.size(1))
-        encode, hidden = self.lstm(emb, hidden)
+        emb = pack(emb, lengths)
+        
+        encode, hidden = self.lstm(emb)
         encode = pad(encode)[0]
         encode = self.dropout(encode)
+
         output = self.output(encode.view(encode.size(0) * encode.size(1), encode.size(2)))
         #return output.view(encode.size(0), encode.size(1), encode.size(2))
         #Flatten the output

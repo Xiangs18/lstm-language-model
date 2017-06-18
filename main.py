@@ -37,11 +37,16 @@ def validate(
 def train(opt):
     
     if opt.data_reload and os.path.exists(opt.train_data + '.preprocessed.pt'):
+        print('='*89)
+        print('There is preprocessed training data, loading...')
         train_dataset = torch.load(opt.train_data + '.preprocessed.pt')
+        print('Done')
+        train_dataset.description()
     else:
         train_dataset = data.DataSet(opt.train_data, opt.batch_size)
         torch.save(train_dataset, opt.train_data + '.preprocessed.pt')
-    
+        print('Save preprocessed dataset at %s'%(opt.train_data + '.preprocessed.pt'))
+
     model = LanguageModel(
             train_dataset.num_vocb,
             dim_word = opt.dim_word,
@@ -58,7 +63,13 @@ def train(opt):
     acc_loss = 0
     start_time = time.time()
 
+    print('='*89)
+    print('Training, will go through %d epoch'%opt.epoch)
+    print(' ')
     for epoch_idx in range(opt.epoch):
+        acc_loss = 0
+        print('='*89)
+        print('Start epoch %d '%epoch_idx)
         epoch_start_time = start_time
         for batch_idx in range(train_dataset.num_batch):
             #Generate data
@@ -66,28 +77,33 @@ def train(opt):
             if opt.cuda:
                 batch_data = batch_data.cuda()
                 batch_lengths = batch_lengths.cuda()
+                target_words = target_words.cuda()
 
             #Forward
-            output = model.forward(batch_data, batch_data)
+            output = model.forward(batch_data, batch_lengths)
             #Backward
             model.zero_grad()
             loss = criterion(output, target_words)
             loss.backward()
 
             for param in model.parameters():
-                param.data.add_(-lr * param.grad.data)
+                param.data.add_(-opt.lr * param.grad.data)
 
             acc_loss += loss.data
-
             if batch_idx % opt.display_freq == 0 and batch_idx > 0:
-                print('Epoch : %d, Batch : %d / %d, Loss : %f, Perplexity : %f, Time : %d'%(
-                    epoch_idx + 1, batch_idx, acc_loss / opt.display_freq, math.exp(acc_loss / opt.display_freq)))
+                average_loss = acc_loss[0] / opt.display_freq
+                print('Epoch : %d, Batch : %d / %d, Loss : %f, Perplexity : %f, Time : %f'%(
+                    epoch_idx + 1, 
+                    batch_idx, train_dataset.num_batch, 
+                    average_loss, 
+                    math.exp(average_loss),
+                    time.time() - start_time))
                 acc_loss = 0
                 start_time = time.time()
 
-        print('Epoch %d finished, spend %d s'%(time.time - epoch_start_time))
+        print('Epoch %d finished, spend %d s'%(epoch_idx + 1,time.time() - epoch_start_time))
         if (1 + epoch_idx) % opt.save_freq == 0:
-            torch.save(model, model_name + 'e' + str(epoch_idx + 1) + '.pt')
+            torch.save(model, opt.model_name + 'e' + str(epoch_idx + 1) + '.pt')
         '''
         val_loss = validate(
                 model=model,
@@ -96,8 +112,8 @@ def train(opt):
                 data_reload=opt.data_reload
                 )
         '''
-        print('Validation Loss : %f'%val_loss)
-        print('Validation Perplexity : %f'%math.exp(val_loss))
+        #print('Validation Loss : %f'%val_loss)
+        #print('Validation Perplexity : %f'%math.exp(val_loss))
 
         
 if __name__ == '__main__':
@@ -131,12 +147,7 @@ if __name__ == '__main__':
             help='Number of LSTM layers')
     parser.add_argument('--dropout_rate', type=float, default=0.3,
             help='Dropout rate')
-    parser.add_argument('--display_freq', type=int, default=100,
+    parser.add_argument('--display_freq', type=int, default=10,
             help='Display every several bathces')
     parser.add_argument('--save_freq', type=int, default=10,
-            help='Save model every several epoch')
-    parser.add_argument('--cuda', action='store_true')
-    
-    opt = parser.parse_args()
-     
-    train(opt)
+            help='Save model every 
