@@ -15,10 +15,12 @@ class LanguageModel(nn.Module):
         self.word_lut.weight.data.normal_(mean=0, std=std)
         self.lstm.weight.data.normal_(mean=0, std=std)
         self.output.data.normal_(mean=0, std=std)
-
-    def forward(self, inputs, hidden):
+`
+    def forward(self, inputs, lengths, hidden):
         emb = self.dropout(self.word_lut(inputs))
-        output, hidden = self.lstm(emb)
-        output = self.dropout(output)
+        encode, hidden = self.lstm(emb, lengths)
+        encode = self.dropout(encode)
+        output = self.output(encode.view(encode.size(0) * encode.size(1), encode.size(2)))
+        return output.view(encode.size(0), encode.size(1), encode.size(2))
 
 

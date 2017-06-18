@@ -70,12 +70,11 @@ class DataSet:
     def get_batch(self, batch_idx):
         lengths = [self.sentence[x].size(0) for x in range(self.batch_size * batch_idx, self.batch_size * (batch_idx + 1))]
         max_len = max(lengths)
-        lengths = Variable(torch.LongTensor(lengths))
         
         batch_data = torch.zeros(self.batch_size, max_len)
         for i in range(self.batch_size):
             sequence_idx = i + self.batch_size * batch_idx
-            batch_data[i].narrow(0, 0, lengths.data[i]).copy_(self.sentence[sequence_idx])
+            batch_data[i].narrow(0, 0, lengths[i]).copy_(self.sentence[sequence_idx])
 
         return Variable(batch_data.t()), lengths
 
