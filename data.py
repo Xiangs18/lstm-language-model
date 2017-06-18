@@ -4,45 +4,64 @@ import random
 import math
 import time
 from torch.autograd import Variable
-
+from collections import OrderedDict
 class DataSet:
     def __init__(self, datapath, batch_size):
-        self.dictionary = {'<unk>': 0}
+        self.dictionary = {}
+        self.frequency = {}
         self.sentence = []
         self.batch_size = batch_size
 
 
-        print('Loading data from %s ...'%datapath)
+        print('Loading data and built dictionaryfrom %s ...'%datapath)
         start_time = time.time()
-        with open(datapath,'r') as f:
+        # Build dictionary
+        with open(datapath, 'r') as f:
             self.num_tokens = 0
-            self.num_vocb = 1
+            self.num_vocb = 0
 
             for line in f:
-                sequence = []
                 tokens = line.split() + ['<eos>']
                 self.num_tokens += len(tokens)
-                # Build dictionary
-
                 for token in tokens:
-                    if token not in self.dictionary:
-                        self.dictionary[token] = self.num_vocb 
+                    if token not in self.frequency:
+                        self.frequency[token] = 1 
                         self.num_vocb += 1
-                    sequence.append(self.dictionary[token])
-                # Add digit sequence
-                #self.sentence.append(sentence)
+                    else:
+                        self.frequency[token] += 1
+            
+            self.frequency['<unk>'] = 0
+            self.frequency = OrderedDict(sorted(self.frequency.items(), key=lambda x : x[1], reverse=True))
+             
+            self.dictionary = OrderedDict(zip(self.frequency.keys(), range(self.num_vocb)))
+        
+
+        #Convert tokens to integers
+        with open(datapath, 'r') as f:
+            for line in f:
+                tokens = line.split() + ['<eos>']
+                sequence = [self.dictionary[token] for token in tokens]
                 self.sentence.append(torch.LongTensor(sequence))
+        
         print('Data discription:')
         print('Data name : %s'%datapath)
         print('Number of sentence : %d'%len(self.sentence))
-        print('Number of tokens %d'%self.num_tokens)
+        print('Number of tokens : %d'%self.num_tokens)
+        print('Vocabulary size : %d'%self.num_vocb)
         print('Finishing loading data in %f s.'%(time.time()-start_time))
-
-        self.num_batch = int(len(self.sentence) / self.batch_size)
         
+        print('Save dictionary at %s.dict'%datapath)
+
+        with open(datapath + '.dict', 'w+') as f:
+            for token, number in self.dictionary.iteritems():
+                f.write('%s %d\n'%(token,number))
+
+        
+        self.num_batch = int(len(self.sentence) / self.batch_size)
+
         self.shuffle = range(self.__len__())
         random.shuffle(self.shuffle)
-        
+
 
     def shuffle_batch(self):
         self.shuffle(self.shuffle)
@@ -72,8 +91,8 @@ if __name__ == '__main__':
     test_data_path = 'data/penn/test.txt'
     test_dataset = DataSet(test_data_path, batch_size = 64)
     batch_data,_ = test_dataset[0]
-    print(batch_data.data)
+    #print(batch_data.data)
     for i in range(len(test_dataset)):
         batch_data, lengths = test_dataset[i]
-        print(batch_data.size())
+        #print(batch_data.size())
         
