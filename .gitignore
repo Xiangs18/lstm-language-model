@@ -1,2 +1,4 @@
 data/
+model/
+exp-log/
 *.pyc
