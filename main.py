@@ -33,17 +33,32 @@ def train(opt):
     val_dataset.set_batch_size(opt.batch_size)
     print('Done.')
 
-    # Build Model
-    model = LanguageModel(
-            train_dataset.num_vocb,
-            dim_word = opt.dim_word,
-            dim_rnn = opt.dim_rnn,
-            num_layers = opt.num_layers,
-            dropout_rate = opt.dropout_rate
-            )
+    # Build / load  Model
+    if opt.model_reload is None:
+        print_line()
+        print('Build new model...')
 
-    model.dictionary = train_dataset.dictionary
+        model = LanguageModel(
+                train_dataset.num_vocb,
+                dim_word = opt.dim_word,
+                dim_rnn = opt.dim_rnn,
+                num_layers = opt.num_layers,
+                dropout_rate = opt.dropout_rate
+                )
+        model.dictionary = train_dataset.dictionary
+        print('Done')
+        train_dataset.describe_dataset()
+        val_dataset.describe_dataset()
+        
+    else:
+        print_line()
+        print('Loading existing model...')
+        model = torch.load(opt.model_reload)
+        print('done')
+        train_dataset.change_dict(model.dictionary)
+        val_dataset.change_dict(model.dictionary)
 
+    print_line()
     if opt.cuda:
         model.cuda()
         print('Using GPU %d'%torch.cuda.current_device())
@@ -57,16 +72,28 @@ def train(opt):
     if opt.cuda:
         criterion = nn.CrossEntropyLoss(weight = criterion_weight, size_average=False).cuda()
 
+    model_start_epoch = model.epoch_idx
+    model_start_batch = model.batch_idx
+    
     print_line()
     print(' ')
-    print('Start training, will go through %d epoch'%opt.epoch)
+    if opt.model_reload is None:
+        print('Start training new model, will go through %d epoch'%opt.epoch)
+    else:
+        print('Continue existing model, from epoch %d, batch %d to epoch %d'%(model_start_epoch, model_start_batch, opt.epoch))
     print(' ')
 
     lr = opt.lr
     best_model = {'val_loss' : 100, 'val_ppl' : math.exp(100), 'epoch_idx' : 1, 'batch_idx' : 1}
 
+    if opt.save_freq == 0:
+        opt.save_freq = train_dataset.num_batch - 1
 
-    for epoch_idx in range(opt.epoch):
+    if(model_start_epoch > opt.epoch):
+        print('This model has already trained more than %d epoch, add epoch parameter is you want to continue'%(opt.epoch + 1))
+        return
+
+    for epoch_idx in range(model_start_epoch, opt.epoch):
         # New epoch
         acc_loss = 0
         acc_count = 0
@@ -77,8 +104,13 @@ def train(opt):
         print('Start epoch %d, learning rate %f '%(epoch_idx + 1, lr))
         print_line('-')
         epoch_start_time = start_time
+        
+        if epoch_idx == model_start_epoch and model_start_batch > 0:
+            start_batch = model_start_batch
+        else:
+            start_batch = 0
 
-        for batch_idx in range(train_dataset.num_batch):
+        for batch_idx in range(start_batch, train_dataset.num_batch):
             # Generate batch data
             batch_data, batch_lengths, target_words = train_dataset[batch_idx]
             if opt.cuda:
@@ -191,41 +223,40 @@ if __name__ == '__main__':
     
     parser.add_argument('--train_data', type=str, default='./data/penn/train.txt',
             help='Training data path')
-    parser.add_argument('--val_data', type=str, default='./data/penn/valid.txt')
-    parser.add_argument('--model_name', type=str, default='LSTM_LM',
+    parser.add_argument('--val_data', type=str, default='./data/penn/valid.txt',
+            help='Validation data path')
+    parser.add_argument('--model_name', type=str, default='penn-lm',
             help='Model name')
+    parser.add_argument('--model_reload', type=str, default='penn-lm.best.pt',
+            help='Relaod model')
     parser.add_argument('--dim_word', type=int, default=256,
             help='Dimension of word embeddig vector')
     parser.add_argument('--dim_rnn', type=int, default=512,
             help='Dimension of LSTM')
+    parser.add_argument('--num_layers', type=int, default=1,
+            help='Number of LSTM layers')
     parser.add_argument('--batch_size',type=int, default=64,
             help='Training batch size')
     parser.add_argument('--val_batch_size', type=int, default=64,
             help='Validation batch size')
     parser.add_argument('--epoch', type=int, default=10,
             help='Finish after several epochs')
-    parser.add_argument('--model_reload', action='store_true',
-            help='Relaod model')
-    parser.add_argument('--data_reload', action='store_true',
-            help='Reload preprocessed data')
+    parser.add_argument('--cuda', action='store_true',
+            help='Use cuda or not')
     parser.add_argument('--optimizer', type=str, default='sgd',
             help='type of optimizer')
     parser.add_argument('--lr', type=float, default=0.1,
             help='Learning rate')
     parser.add_argument('--lr_decay', type=float, default=1.0,
             help='Learning rate decay every epoch')
-    parser.add_argument('--num_layers', type=int, default=1,
-            help='Number of LSTM layers')
+    parser.add_argument('--clip', type=float, default=5,
+            help='Prevent gradient explode')
     parser.add_argument('--dropout_rate', type=float, default=0.3,
             help='Dropout rate')
     parser.add_argument('--display_freq', type=int, default=10,
             help='Display every several bathces')
     parser.add_argument('--save_freq', type=int, default=10,
             help='Save model every several epoch')
-    parser.add_argument('--cuda', action='store_true',
-            help='Use cuda or not')
-    parser.add_argument('--clip', type=float, default=5,
-            help='Prevent gradient explode')
     parser.add_argument('--random_seed', type=int, default=111,
             help='Random seed to reproduce result')
     

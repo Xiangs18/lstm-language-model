@@ -82,7 +82,7 @@ class DataSet:
         self.batch_size = batch_size
         self.num_batch = int(len(self.sentence) / self.batch_size)
         self.index = range(self.num_batch)
-        self.describe_dataset()
+        #self.describe_dataset()
 
     def index_token(self):
         #Convert tokens to integers
