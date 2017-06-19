@@ -6,8 +6,11 @@ import time
 from torch.autograd import Variable
 from collections import OrderedDict
 class DataSet:
-    def __init__(self, datapath, batch_size):
-        self.dictionary = {}
+    def __init__(self, datapath, batch_size, refer_dict=None):
+        if refer_dict is None:
+            self.dictionary = {}
+        else:
+            self.dictionary = refer_dict.dictionary
         self.frequency = {}
         self.sentence = []
         self.batch_size = batch_size
@@ -33,15 +36,16 @@ class DataSet:
             
             self.frequency['<unk>'] = 0
             self.frequency = OrderedDict(sorted(self.frequency.items(), key=lambda x : x[1], reverse=True))
-             
-            self.dictionary = OrderedDict(zip(self.frequency.keys(), range(self.num_vocb)))
+            
+            if refer_dict is None: 
+                self.dictionary = OrderedDict(zip(self.frequency.keys(), range(1, self.num_vocb + 1)))
         
 
         #Convert tokens to integers
         with open(datapath, 'r') as f:
             for line in f:
                 tokens = line.split() + ['<eos>']
-                sequence = [self.dictionary[token] for token in tokens]
+                sequence = [self.dictionary[token] if token in self.dictionary else self.dictionary['<unk>'] for token in tokens]
                 self.sentence.append(torch.LongTensor(sequence))
         
         print('Finishing loading and preprocessing data in %f s.'%(time.time()-start_time))
@@ -64,14 +68,14 @@ class DataSet:
         print('='*89)
         print('Data discription:')
         print('Data name : %s'%self.datapath)
-        print('Number of batches : %d'%self.num_batch)
         print('Number of sentence : %d'%len(self.sentence))
         print('Number of tokens : %d'%self.num_tokens)
         print('Vocabulary size : %d'%self.num_vocb)
+        print('Number of batches : %d'%self.num_batch)
+        print('Batch size : %d'%self.batch_size)
 
     def shuffle_batch(self):
         self.shuffle(self.shuffle)
-
 
     def get_batch(self, batch_idx):
         lengths = [self.sentence[x].size(0) for x in range(self.batch_size * batch_idx, self.batch_size * (batch_idx + 1))]
@@ -79,15 +83,11 @@ class DataSet:
         total_len = sum(lengths)
 
         sorted_lengths = sorted(enumerate(lengths), key=lambda x: x[1], reverse=True)
-        
-        batch_data = torch.LongTensor(self.batch_size, max_len)
+
+        batch_data = torch.LongTensor(max_len, self.batch_size)
         batch_data.zero_()
 
-        #target_words = torch.FloatTensor(total_len, self.num_vocb)
-        #target_words.zero_()
-        #target_offset = 0
-        
-        target_words = torch.LongTensor(self.batch_size, max_len)
+        target_words = torch.LongTensor(max_len, self.batch_size)
         target_words.zero_()
 
         for i in range(self.batch_size):
@@ -95,18 +95,12 @@ class DataSet:
             idx_ = sorted_lengths[i][0]
 
             sequence_idx = idx_ + self.batch_size * batch_idx
-            batch_data[i].narrow(0, 0, len_).copy_(self.sentence[sequence_idx])
-            target_words[i].narrow(0, 1, len_ - 1 ).copy_(self.sentence[sequence_idx][1:])
+            batch_data[: len_, i].copy_(self.sentence[sequence_idx])
+            target_words[1 : len_, i].copy_(self.sentence[sequence_idx][1:])
 
-            #one hot
-            #target_words.narrow(1, i, 1).narrow(0, 1, len_ - 1).squeeze().scatter_(1, batch_data[i].narrow(0, 1, len_ - 1).view(-1, 1), 1)
-    
+        batch_lengths = torch.LongTensor([x[1] for x in sorted_lengths])
 
-            
-        return Variable(batch_data.t()), \
-                Variable(torch.LongTensor([x[1] for x in sorted_lengths])), \
-                Variable(target_words.t().contiguous().view(-1))
-
+        return Variable(batch_data), Variable(batch_lengths), Variable(target_words)
 
     def __getitem__(self, index):
         return self.get_batch(index) 
@@ -118,10 +112,11 @@ class DataSet:
 if __name__ == '__main__':
     test_data_path = 'data/penn/test.txt'
     test_dataset = DataSet(test_data_path, batch_size = 64)
-    batch_data,_,target = test_dataset[0]
-    print(target.data.size())
+    batch_data,_,target_oh = test_dataset[0]
+    print(batch_data[:, 0])
+    print(target_oh.data[:, 0])
     for i in range(len(test_dataset)):
         batch_data, lengths, target = test_dataset[i]
         #if(lengths.data.min() <=0):
-        print(lengths.contiguous().data.view(-1).tolist())
+        #print(batch_data.data)
         
