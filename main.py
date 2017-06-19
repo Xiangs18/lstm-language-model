@@ -8,6 +8,7 @@ import math
 import os
 import argparse
 import shutil
+import re
 def evaluate(
         model='model/LSTM_LM.pt',
         eval_data='data/penn/valid.txt',
@@ -51,8 +52,11 @@ def evaluate(
         count += batch_lengths.data.sum()
     return acc_loss[0] / count 
 
+def print_line(sym='=',width=89):
+    print(sym*width)
+
 def train(opt):
-    
+    ''' 
     if opt.data_reload and os.path.exists(opt.train_data + '.preprocessed.pt'):
         print('='*89)
         print('There is preprocessed training data, loading...')
@@ -80,6 +84,22 @@ def train(opt):
         print('Save preprocessed validation dataset at %s'%(opt.val_data + '.preprocessed.pt'))
 
     val_dataset.change_dict(train_dataset.dictionary) 
+    '''
+    print_line()
+    print('Loading training data ...')
+    check_name = re.compile('.*\.prep\.train\.pt')
+    assert os.path.exists(opt.train_data) or check_name.match(opt.train_data) is None
+    train_dataset = torch.load(opt.train_data)
+    train_dataset.set_batch_size(opt.batch_size)
+    print('Done.')
+
+    print_line()
+    print('Loading validation data ...')
+    check_name = re.compile('.*\.prep\.val\.pt')
+    assert os.path.exists(opt.val_data) or check_name.match(opt.val_data) is None
+    val_dataset = torch.load(opt.val_data)
+    val_dataset.set_batch_size(opt.batch_size)
+    print('Done.')
 
     model = LanguageModel(
             train_dataset.num_vocb,
@@ -113,13 +133,18 @@ def train(opt):
     print(' ')
     print('Start training, will go through %d epoch'%opt.epoch)
     print(' ')
+   
+    lr = opt.lr
+    
     for epoch_idx in range(opt.epoch):
         acc_loss = 0
         count = 0
+        train_dataset.shuffle_batch()
         print('='*89)
-        print('Start epoch %d, learning rate %f '%(epoch_idx + 1, opt.lr))
+        print('Start epoch %d, learning rate %f '%(epoch_idx + 1, lr))
         epoch_start_time = start_time
         for batch_idx in range(train_dataset.num_batch):
+
             #Generate data
             batch_data, batch_lengths, target_words = train_dataset[batch_idx]
             if opt.cuda:
@@ -137,11 +162,12 @@ def train(opt):
             torch.nn.utils.clip_grad_norm(model.parameters(), opt.clip)
             for param in model.parameters():
                 param.data.add_(-opt.lr * param.grad.data)
+            
 
             acc_loss += loss.data
             count += batch_lengths.data.sum()
 
-            if batch_idx % opt.display_freq == 0 and batch_idx > 0:
+            if batch_idx % opt.display_freq == 0:
                 average_loss = acc_loss[0] / count
                 print('Epoch : %d, Batch : %d / %d, Loss : %f, Perplexity : %f, Time : %f'%(
                     epoch_idx + 1, 
@@ -152,6 +178,34 @@ def train(opt):
                 acc_loss = 0
                 count = 0
                 start_time = time.time()
+            
+            #Save if it is neccesary
+            if (1 + batch_idx) % opt.save_freq == 0:
+                
+                print('-'*89) 
+                print('Pause training for save and validate.')
+                
+                val_loss = evaluate(
+                    model=model,
+                    eval_data=val_dataset,
+                    batch_size=opt.val_batch_size,
+                    data_reload=opt.data_reload
+                    )
+                
+                print('Validation Loss : %f'%val_loss)
+                print('Validation Perplexity : %f'%math.exp(val_loss))
+
+                model.val_loss = val_loss
+                model.val_ppl = math.exp(val_loss)
+                model.epoch_idx = epoch_idx + 1
+
+                model_save = opt.model_name + '-e_' + str(epoch_idx + 1) + '-b_' + str(batch_idx + 1) +'-ppl_' + str(int(math.exp(val_loss))) + '.pt'
+                torch.save(model, model_save)
+
+                print('-'*89)
+                print('Save model at %s'%(model_save))
+                print_line('-')
+                print('Continue Training...')
 
         print('Epoch %d finished, spend %d s'%(epoch_idx + 1,time.time() - epoch_start_time))
          
@@ -170,7 +224,7 @@ def train(opt):
         model.val_ppl = math.exp(val_loss)
         model.epoch_idx = epoch_idx + 1
 
-
+        '''
         if (1 + epoch_idx) % opt.save_freq == 0:
             model_save = opt.model_name + '-e_' + str(epoch_idx + 1) +'-ppl_' + str(int(math.exp(val_loss))) + '.pt'
             torch.save(model, model_save)
@@ -180,14 +234,25 @@ def train(opt):
         if model.val_loss < best_model['val_loss']:
             print('-'*89)
             print('New best model on validation set')
+            if (1 + epoch_idx) % opt.save_freq != 0:
+                model_save = opt.model_name + '-e_' + str(epoch_idx + 1) +'-ppl_' + str(int(math.exp(val_loss))) + '.pt'
+                torch.save(model, model_save)
+                print('-'*89)
+                print('Save model at %s'%(model_save)) 
+                print('It is not a regular save. It was saved becasue it\'s the best so far')
             best_model['val_loss'] = model.val_loss
             best_model['val_ppl'] = model.val_ppl
             best_model['epoch_idx'] = model.epoch_idx
             best_model['name'] = model_save
+        '''
+        
+        lr *= opt.lr_decay
 
     print('='*89)
+    print(' ')
     print('Finish training %d epochs!'%opt.epoch)
-    print('-'*89)
+    print(' ')
+    print('='*89)
     print('Best model:')
     print('Epoch : %d, Loss : %f, Perplexity : %f'%(best_model['epoch_idx'], best_model['val_loss'], best_model['val_ppl']))
     print('-'*89)
@@ -223,6 +288,8 @@ if __name__ == '__main__':
             help='type of optimizer')
     parser.add_argument('--lr', type=float, default=0.1,
             help='Learning rate')
+    parser.add_argument('--lr_decay', type=float, default=1.0,
+            help='Learning rate decay every epoch')
     parser.add_argument('--num_layers', type=int, default=1,
             help='Number of LSTM layers')
     parser.add_argument('--dropout_rate', type=float, default=0.3,

@@ -6,7 +6,7 @@ import time
 from torch.autograd import Variable
 from collections import OrderedDict
 class DataSet:
-    def __init__(self, datapath, batch_size, build_dict=False):
+    def __init__(self, datapath, batch_size=1, build_dict=False, display_freq=0):
         self.dictionary = {}
         self.frequency = {}
         self.sentence = []
@@ -16,6 +16,8 @@ class DataSet:
         self.num_tokens = 0
         self.num_vocb = 0
         self.shuffle = True
+        self.display_freq = display_freq
+        self.max_dict = 50000
         print('='*89)
         print('Loading data from %s ...'%datapath)
         
@@ -34,13 +36,15 @@ class DataSet:
         print('Batch size : %d'%self.batch_size)
 
 
-    def build_dict(self,save_as_text=True):
+    def build_dict(self, save_as_text=True):
         print('Building dictionary...')
         with open(self.datapath, 'r') as f:
             self.num_tokens = 0
             self.num_vocb = 0
-
-            for line in f:
+            
+            for count, line in enumerate(f):
+                if self.display_freq > 0 and count % self.display_freq == 0:
+                    print('%d sentence processed'%(count))
                 tokens = line.split() + ['<eos>']
                 for token in tokens:
                     if token not in self.frequency:
@@ -49,10 +53,15 @@ class DataSet:
                     else:
                         self.frequency[token] += 1
             
-            self.frequency['<unk>'] = 0
+            self.frequency['<unk>'] = 1 + max(self.frequency.values())
             self.frequency = OrderedDict(sorted(self.frequency.items(), key=lambda x : x[1], reverse=True))
             
+            if self.num_vocb > self.max_dict:
+                self.num_vocb = self.max_dict
+                self.frequency = self.frequency[:self.num_vocb]
+            
             self.dictionary = OrderedDict(zip(self.frequency.keys(), range(1, self.num_vocb + 1)))
+        
         print('Done.')
         
         print('Save dictionary at %s.dict'%self.datapath)
@@ -69,12 +78,19 @@ class DataSet:
         self.num_vocb = len(dictionary)
         self.index_token()
 
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+        self.num_batch = int(len(self.sentence) / self.batch_size)
+        self.index = range(self.num_batch)
+        self.describe_dataset()
 
     def index_token(self):
         #Convert tokens to integers
         print('Index tokens ...')
         with open(self.datapath, 'r') as f:
-            for line in f:
+            for count, line in enumerate(f):
+                if self.display_freq > 0 and count % self.display_freq == 0:
+                    print('%d  sentence processed'%(count))
                 tokens = line.split() + ['<eos>']
                 self.num_tokens += len(tokens)
                 sequence = [self.dictionary[token] if token in self.dictionary else self.dictionary['<unk>'] for token in tokens]
