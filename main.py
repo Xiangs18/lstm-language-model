@@ -113,10 +113,15 @@ def train(opt):
         for batch_idx in range(start_batch, train_dataset.num_batch):
             # Generate batch data
             batch_data, batch_lengths, target_words = train_dataset[batch_idx]
+
             if opt.cuda:
                 batch_data = batch_data.cuda()
                 batch_lengths = batch_lengths.cuda()
                 target_words = target_words.cuda()
+            
+            batch_data = Variable(batch_data)
+            batch_lengths = Variable(batch_lengths)
+            target_words = Variable(target_words)
 
             # Forward
             output_flat = model.forward(batch_data, batch_lengths)
@@ -227,7 +232,7 @@ if __name__ == '__main__':
             help='Validation data path')
     parser.add_argument('--model_name', type=str, default='penn-lm',
             help='Model name')
-    parser.add_argument('--model_reload', type=str, default='penn-lm.best.pt',
+    parser.add_argument('--model_reload', type=str, default=None,
             help='Relaod model')
     parser.add_argument('--dim_word', type=int, default=256,
             help='Dimension of word embeddig vector')

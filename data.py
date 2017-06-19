@@ -125,7 +125,7 @@ class DataSet:
 
         batch_lengths = torch.LongTensor([x[1] for x in sorted_lengths])
 
-        return Variable(batch_data), Variable(batch_lengths), Variable(target_words)
+        return batch_data, batch_lengths, target_words
 
 
     def shuffle_batch(self):
