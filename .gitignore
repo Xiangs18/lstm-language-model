@@ -1,4 +1,4 @@
-data/
-model/
-exp-log/
+example/data/
+example/model/
+example/exp-log/
 *.pyc

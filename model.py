@@ -20,7 +20,9 @@ class LanguageModel(nn.Module):
 
         self.val_loss = 100
         self.epoch_idx = 0
+        self.batch_idx = 0
         self.val_ppl = math.exp(self.val_loss)
+        self.dictionary = None
 
 
     def init_weights(self, std = 0.1):
