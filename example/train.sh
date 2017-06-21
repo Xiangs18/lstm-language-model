@@ -7,7 +7,6 @@ CUDA_VISIBLE_DEVICES=$GPU python -u $LM_PATH/main.py \
   --train_data './data/penn/train.txt.prep.train.pt' \
   --val_data './data/penn/valid.txt.prep.val.pt' \
   --model_name 'model/penn-lm' \
-  --model_reload 'model/penn-lm.best.pt'  \
   --dim_word 256 \
   --dim_rnn  256\
   --num_layers 2 \
@@ -18,7 +17,7 @@ CUDA_VISIBLE_DEVICES=$GPU python -u $LM_PATH/main.py \
   --lr 1 \
   --lr_decay 0.9 \
   --dropout_rate 0.5 \
-  --display_freq 100\
+  --display_freq 20\
   --save_freq 0\
   --cuda \
   --clip 5 \
