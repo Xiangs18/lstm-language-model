@@ -3,6 +3,7 @@ Implementation of LSTM language model using PyTorch
 ## preprocess.py
 Preprocess the data before training and evaluate
 Parameters | Description
+------------ | -------------
 --train_data | Training data, default='data/penn/train.txt'
 --val_data | Validation data pathtype=str, default='data/penn/valid.txt'
 --dict_size | Reduce dictionary if overthis size, default=50000
