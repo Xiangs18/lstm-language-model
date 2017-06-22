@@ -28,7 +28,11 @@ if __name__ == '__main__':
             help='Reduce dictionary if overthis size')
     parser.add_argument('--display_freq', type=int, default=100000,
             help='Display progress every this number of sentences, 0 for no diplay')
-    
+    parser.add_argument('--max_len', type=int, default=100,
+            help='Maximum length od=f sentence')
+    parser.add_argument('--trunc_len',type=int, default=100,
+            help='Truncate the sentence that longer than maximum length')
+
     opt = parser.parse_args() 
     
     preprocess(opt)

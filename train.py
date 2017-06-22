@@ -88,14 +88,13 @@ def train(opt):
         return
     
     print_line()
-    print(' ')
+    print('')
     if opt.model_reload is None:
         print('Start training new model, will go through %d epoch'%opt.epoch)
     else:
         print('Continue existing model, from epoch %d, batch %d to epoch %d'%(model_start_epoch, model_start_batch, opt.epoch))
-    print(' ')
+    print('')
 
-    #best_model = {'val_loss' : 100, 'val_ppl' : math.exp(100), 'epoch_idx' : 1, 'batch_idx' : 1}
     best_model = model.train_info
     
     if opt.save_freq == 0:

@@ -98,7 +98,8 @@ class DataSet:
     def index_token(self):
         #Convert tokens to integers
         print('Index tokens ...')
-        ignore = 0 
+        zero_sentence = 0
+        long_sentence = 0
         with open(self.datapath, 'r') as f:
             for count, line in enumerate(f):
                 
@@ -107,11 +108,15 @@ class DataSet:
                 
                 tokens = [const.BOS_WORD] + line.split() + [const.EOS_WORD]
                 
-                if len(tokens) == 2 or (len(tokens) > max_len and self.trunc_len == 0):
-                    ignore += 1
+                if len(tokens) == 2:
+                    zero_sentence += 1
                 else:
-                    if len(tokens) > max_len and self.trunc_len > 0:
-                        tokens = tokens[:self.trunc_len]
+                    if len(tokens) > self.max_len:
+                        long_sentence += 1
+                        if self.trunc_len > 0:
+                            tokens = tokens[:self.trunc_len]
+                        else:
+                            continue
 
                     self.num_tokens += len(tokens)
                     sequence = [self.dictionary[token] if token in self.dictionary else self.dictionary[const.UNK_WORD] for token in tokens]
@@ -119,7 +124,7 @@ class DataSet:
     
         self.num_batch = int(len(self.sentence) / self.batch_size)
         self.index = range(self.num_batch)
-        print('%d sentences were processed, %d were ignored because zero length or longer than maximum length'%(len(self.sentence, ignore)))
+        print('%d sentences were processed, %d longer than maximum length,%d were ignored because zero length'%(len(self.sentence), long_sentence, zero_sentence))
         self.describe_dataset()
         print('Done.')
 
