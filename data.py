@@ -5,6 +5,7 @@ import math
 import time
 from torch.autograd import Variable
 from collections import OrderedDict
+import const
 class DataSet:
     def __init__(self, datapath, batch_size=1, build_dict=False, display_freq=0):
         self.dictionary = {}
@@ -45,15 +46,20 @@ class DataSet:
             for count, line in enumerate(f):
                 if self.display_freq > 0 and count % self.display_freq == 0:
                     print('%d sentence processed'%(count))
-                tokens = line.split() + ['<eos>']
+
+                tokens = [const.BOS_WORD] + line.split() + [const.EOS_WORD]
                 for token in tokens:
                     if token not in self.frequency:
                         self.frequency[token] = 1 
                         self.num_vocb += 1
                     else:
                         self.frequency[token] += 1
-            
-            self.frequency['<unk>'] = 1 + max(self.frequency.values())
+
+            max_freq = max(self.frequency.values) 
+            self.frequency[const.UNK_WORD] = 4 - const.UNK + max_freq
+            self.frequency[const.BOS_WORD] = 4 - const.BOS + max_freq
+            self.frequency[const.EOS_WORD] = 4 - const.EOS + max_freq 
+            self.frequency[const.PAD_WORD] = 4 - const.PAD + max_freq
             self.frequency = OrderedDict(sorted(self.frequency.items(), key=lambda x : x[1], reverse=True))
             
             if self.num_vocb > self.max_dict:
@@ -120,6 +126,7 @@ class DataSet:
             idx_ = sorted_lengths[i][0]
 
             sequence_idx = idx_ + self.batch_size * batch_idx
+            
             batch_data[: len_, i].copy_(self.sentence[sequence_idx])
             target_words[ : len_ - 1, i].copy_(self.sentence[sequence_idx][1 : len_])
 

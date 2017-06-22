@@ -3,6 +3,7 @@ import data
 from model import LanguageModel
 from torch import nn
 from torch.autograd import Variable
+from torch import optim
 import time
 import math
 import os
@@ -10,6 +11,7 @@ import argparse
 import shutil
 import re
 from evaluate import evaluate
+import const
 
 def print_line(sym='=',width=89):
     print(sym*width)
@@ -57,7 +59,11 @@ def train(opt):
         print('done')
         train_dataset.change_dict(model.dictionary)
         val_dataset.change_dict(model.dictionary)
-
+     
+    model_start_epoch = model.epoch_idx
+    model_start_batch = model.batch_idx
+    
+    # Use GPU / CPU
     print_line()
     if opt.cuda:
         model.cuda()
@@ -65,15 +71,21 @@ def train(opt):
     else:
         print('Using CPU')
 
-    model.train()
     # Crterion, mask padding
-    criterion_weight = torch.ones(train_dataset.num_vocb + 1)
-    criterion_weight[0] = 0
+    criterion_weight = torch.ones(train_dataset.num_vocb)
+    criterion_weight[const.PAD] = 0
+    criterion = nn.CrossEntropyLoss(weight = criterion_weight, size_average=False)
     if opt.cuda:
-        criterion = nn.CrossEntropyLoss(weight = criterion_weight, size_average=False).cuda()
+        criterion = criterion.cuda
 
-    model_start_epoch = model.epoch_idx
-    model_start_batch = model.batch_idx
+    # Optimizer
+    lr = opt.lr
+    optimizer = getattr(optim,opt.optimizer)(model.parameters(), lr=lr)
+    
+
+    if(model_start_epoch > opt.epoch):
+        print('This model has already trained more than %d epoch, add epoch parameter is you want to continue'%(opt.epoch + 1))
+        return
     
     print_line()
     print(' ')
@@ -83,16 +95,14 @@ def train(opt):
         print('Continue existing model, from epoch %d, batch %d to epoch %d'%(model_start_epoch, model_start_batch, opt.epoch))
     print(' ')
 
-    lr = opt.lr
     best_model = {'val_loss' : 100, 'val_ppl' : math.exp(100), 'epoch_idx' : 1, 'batch_idx' : 1}
 
     if opt.save_freq == 0:
         opt.save_freq = train_dataset.num_batch - 1
 
-    if(model_start_epoch > opt.epoch):
-        print('This model has already trained more than %d epoch, add epoch parameter is you want to continue'%(opt.epoch + 1))
-        return
-
+    # Train
+    model.train()
+    
     for epoch_idx in range(model_start_epoch, opt.epoch):
         # New epoch
         acc_loss = 0
@@ -119,30 +129,36 @@ def train(opt):
                 batch_lengths = batch_lengths.cuda()
                 target_words = target_words.cuda()
             
-            batch_data = Variable(batch_data)
-            batch_lengths = Variable(batch_lengths)
-            target_words = Variable(target_words)
+            batch_data = Variable(batch_data, requires_grad=False)
+            batch_lengths = Variable(batch_lengths, requires_grad=False)
+            target_words = Variable(target_words, requires_grad=False)
+            
+            optimizer.zero_grad()
 
             # Forward
             output_flat = model.forward(batch_data, batch_lengths)
 
-            # Backward
+            # Caculate loss
             loss = criterion(output_flat, target_words.view(-1))
- 
+            
+            # Backward
             loss.backward()
-
+            
             # Prevent gradient explode
             torch.nn.utils.clip_grad_norm(model.parameters(), opt.clip)
 
             # Update parameters
             # Need to add other optimizers
-            for param in model.parameters():
-                param.data.add_(-opt.lr * param.grad.data)
+            #for param in model.parameters():
+            #    param.data.add_(-opt.lr * param.grad.data)
+            optimizer.step()
+
+            
 
             # Accumulate loss
             acc_loss += loss.data
             acc_count += batch_lengths.data.sum()
-
+            
             # Display progress
             if batch_idx % opt.display_freq == 0:
                 average_loss = acc_loss[0] / acc_count
@@ -201,7 +217,7 @@ def train(opt):
         print('Epoch %d finished, spend %d s'%(epoch_idx + 1,time.time() - epoch_start_time))
 
         
-        lr *= opt.lr_decay
+        #lr *= opt.lr_decay
 
     print_line()
     print(' ')
