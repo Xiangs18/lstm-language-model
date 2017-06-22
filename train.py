@@ -60,8 +60,8 @@ def train(opt):
         train_dataset.change_dict(model.dictionary)
         val_dataset.change_dict(model.dictionary)
      
-    model_start_epoch = model.epoch_idx
-    model_start_batch = model.batch_idx
+    model_start_epoch = model.train_info['epoch idx']
+    model_start_batch = model.train_info['batch idx']
     
     # Use GPU / CPU
     print_line()
@@ -72,11 +72,11 @@ def train(opt):
         print('Using CPU')
 
     # Crterion, mask padding
-    criterion_weight = torch.ones(train_dataset.num_vocb)
+    criterion_weight = torch.ones(train_dataset.num_vocb + 1)
     criterion_weight[const.PAD] = 0
     criterion = nn.CrossEntropyLoss(weight = criterion_weight, size_average=False)
     if opt.cuda:
-        criterion = criterion.cuda
+        criterion = criterion.cuda()
 
     # Optimizer
     lr = opt.lr

@@ -16,7 +16,7 @@ class DataSet:
         self.num_batch = 0
         self.num_tokens = 0
         self.num_vocb = 0
-        self.shuffle = 2
+        self.shuffle_level = 2
         self.display_freq = display_freq
         self.max_dict = 50000
         print('='*89)
@@ -55,7 +55,7 @@ class DataSet:
                     else:
                         self.frequency[token] += 1
 
-            max_freq = max(self.frequency.values) 
+            max_freq = max(self.frequency.values()) 
             self.frequency[const.UNK_WORD] = 4 - const.UNK + max_freq
             self.frequency[const.BOS_WORD] = 4 - const.BOS + max_freq
             self.frequency[const.EOS_WORD] = 4 - const.EOS + max_freq 
@@ -136,22 +136,23 @@ class DataSet:
 
 
     def shuffle(self):
-        assert self.shuffle = 0, 'Enable shuffle first!'
-        if self.shuffle == 1:
+        print(self.shuffle_level)
+        assert self.shuffle_level > 0, 'Enable shuffle first!'
+        if self.shuffle_level == 1:
             random.shuffle(self.index)
-        if self.shuffle == 2:
+        if self.shuffle_level == 2:
             random.shuffle(self.sentence)
     
 
-    def enable_shuffle(self, status):
-        self.shuffle = status
+    def change_shuffle_level(self, level):
+        self.shuffle_level = level
 
 
     def __getitem__(self, index):
-        if not self.shuffle:
-            return self.get_batch(index) 
+        if self.shuffle == 1:
+            return self.get_batch(self.index[index]) 
         else:
-            return self.get_batch(self.index[index])
+            return self.get_batch(index)
 
     def __len__(self):
         return self.num_batch

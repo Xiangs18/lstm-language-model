@@ -25,9 +25,9 @@ class LanguageModel(nn.Module):
         self.train_info = {}
         self.train_info['val loss'] = 100
         self.train_info['train loss'] = 100
-        self.train_info = ['epoch idx'] = 0
-        self.train_info = ['batch idx'] = 0
-        self.train_info['val ppl'] = math.exp(self.val_loss)
+        self.train_info['epoch idx'] = 0
+        self.train_info['batch idx'] = 0
+        self.train_info['val ppl'] = math.exp(100)
         
         # Dictionary for token to index
         self.dictionary = None
