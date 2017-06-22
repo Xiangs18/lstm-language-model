@@ -151,11 +151,18 @@ def train(opt):
 
             # Update parameters
             optimizer.step()
-
+            
             # Accumulate loss
             acc_loss += loss.data
             acc_count += batch_lengths.data.sum()
             
+            # Free some memory
+            del output_flat
+            del loss
+            del batch_data
+            del batch_lengths
+            del target_words
+
             # Display progress
             if batch_idx % opt.display_freq == 0:
                 average_loss = acc_loss[0] / acc_count
@@ -216,7 +223,7 @@ def train(opt):
 
 
                 print_line('-')
-                print('Save model at %s'%(model_save))
+                print('Save model at %s'%(model_savename))
                 print_line('-')
                 print('Continue Training...')
 
@@ -274,7 +281,7 @@ if __name__ == '__main__':
             help='Finish after several epochs')
     parser.add_argument('--cuda', action='store_true',
             help='Use cuda or not')
-    parser.add_argument('--optimizer', type=str, default='sgd',
+    parser.add_argument('--optimizer', type=str, default='SGD',
             help='type of optimizer')
     parser.add_argument('--lr', type=float, default=0.1,
             help='Learning rate')

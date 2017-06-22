@@ -4,7 +4,7 @@ import data
 import os
 import math
 import torch.nn as nn
-
+from torch.autograd import Variable
 def evaluate(
         model=None,
         eval_dataset=None,
@@ -28,6 +28,10 @@ def evaluate(
             batch_lengths = batch_lengths.cuda()
             target_words = target_words.cuda()
         #Forward
+        batch_data = Variable(batch_data, volatile=True)
+        batch_lengths = Variable(batch_lengths, volatile=True)
+        target_words = Variable(target_words, volatile=True)
+        
         output = model.forward(batch_data, batch_lengths)
         loss = criterion(output, target_words.view(-1))
         acc_loss += loss.data
