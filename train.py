@@ -95,8 +95,9 @@ def train(opt):
         print('Continue existing model, from epoch %d, batch %d to epoch %d'%(model_start_epoch, model_start_batch, opt.epoch))
     print(' ')
 
-    best_model = {'val_loss' : 100, 'val_ppl' : math.exp(100), 'epoch_idx' : 1, 'batch_idx' : 1}
-
+    #best_model = {'val_loss' : 100, 'val_ppl' : math.exp(100), 'epoch_idx' : 1, 'batch_idx' : 1}
+    best_model = model.train_info
+    
     if opt.save_freq == 0:
         opt.save_freq = train_dataset.num_batch - 1
 
@@ -108,13 +109,14 @@ def train(opt):
         acc_loss = 0
         acc_count = 0
         start_time = time.time()
-        train_dataset.shuffle_batch()
+        train_dataset.shuffle()
 
         print_line()
         print('Start epoch %d, learning rate %f '%(epoch_idx + 1, lr))
         print_line('-')
         epoch_start_time = start_time
-        
+       
+        # If load model and continue training
         if epoch_idx == model_start_epoch and model_start_batch > 0:
             start_batch = model_start_batch
         else:
@@ -148,12 +150,7 @@ def train(opt):
             torch.nn.utils.clip_grad_norm(model.parameters(), opt.clip)
 
             # Update parameters
-            # Need to add other optimizers
-            #for param in model.parameters():
-            #    param.data.add_(-opt.lr * param.grad.data)
             optimizer.step()
-
-            
 
             # Accumulate loss
             acc_loss += loss.data
@@ -190,22 +187,31 @@ def train(opt):
                 print('Validation Loss : %f'%val_loss)
                 print('Validation Perplexity : %f'%math.exp(val_loss))
 
+               
+                model_savename = opt.model_name + '-e_' + str(epoch_idx + 1) + '-b_' + str(batch_idx + 1) +'-ppl_' + str(int(math.exp(val_loss))) + '.pt'
+                
                 model.val_loss = val_loss
                 model.val_ppl = math.exp(val_loss)
                 model.epoch_idx = epoch_idx + 1
                 model.batch_idx = batch_idx + 1
                 
-                model_save = opt.model_name + '-e_' + str(epoch_idx + 1) + '-b_' + str(batch_idx + 1) +'-ppl_' + str(int(math.exp(val_loss))) + '.pt'
-                torch.save(model, model_save)
+                model.train_info['val loss'] = val_loss
+                model.train_info['train loss'] = math.exp(val_loss)
+                model.train_info['epoch idx'] = epoch_idx + 1
+                model.train_info['batch idx'] = batch_idx + 1 
+                model.train_info['val ppl'] = math.exp(model.val_loss)
+                model.train_info['save name'] = model_savename
                 
-                if model.val_loss < best_model['val_loss']:
+                try:
+                    torch.save(model, model_savename)
+                except:
+                    print('Failed to save model!')
+
+
+                if model.val_loss < best_model['val loss']:
                     print_line('-')
                     print('New best model on validation set')
-                    best_model['val_loss'] = model.val_loss
-                    best_model['val_ppl'] = model.val_ppl
-                    best_model['epoch_idx'] = model.epoch_idx
-                    best_model['batch_idx'] = model.batch_idx
-                    best_model['name'] = model_save
+                    best_model = model.train_info
                     shutil.copy2(best_model['name'], opt.model_name + '.best.pt')
 
 
@@ -213,12 +219,15 @@ def train(opt):
                 print('Save model at %s'%(model_save))
                 print_line('-')
                 print('Continue Training...')
+
         print_line('-')
         print('Epoch %d finished, spend %d s'%(epoch_idx + 1,time.time() - epoch_start_time))
 
-        
+        # Update lr if needed
         #lr *= opt.lr_decay
+        
 
+    # Finish training
     print_line()
     print(' ')
     print('Finish training %d epochs!'%opt.epoch)
@@ -231,6 +240,7 @@ def train(opt):
         best_model['val_loss'], 
         best_model['val_ppl']))
     print_line('-')
+    
 
     print('Save best model at %s'%(opt.model_name + '.best.pt'))
     shutil.copy2(best_model['name'], opt.model_name + '.best.pt')
@@ -280,7 +290,6 @@ if __name__ == '__main__':
             help='Save model every several epoch')
     parser.add_argument('--random_seed', type=int, default=111,
             help='Random seed to reproduce result')
-    
     
     opt = parser.parse_args()
 

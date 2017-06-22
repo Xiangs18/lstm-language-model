@@ -16,7 +16,7 @@ class DataSet:
         self.num_batch = 0
         self.num_tokens = 0
         self.num_vocb = 0
-        self.shuffle = True
+        self.shuffle = 2
         self.display_freq = display_freq
         self.max_dict = 50000
         print('='*89)
@@ -135,11 +135,13 @@ class DataSet:
         return batch_data, batch_lengths, target_words
 
 
-    def shuffle_batch(self):
-        assert self.shuffle, 'Enable shuffle first!'
-        
-        random.shuffle(self.index)
-
+    def shuffle(self):
+        assert self.shuffle = 0, 'Enable shuffle first!'
+        if self.shuffle == 1:
+            random.shuffle(self.index)
+        if self.shuffle == 2:
+            random.shuffle(self.sentence)
+    
 
     def enable_shuffle(self, status):
         self.shuffle = status

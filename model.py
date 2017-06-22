@@ -7,27 +7,30 @@ import math
 class LanguageModel(nn.Module):
 
     def __init__(self, voc_size, dim_word, dim_rnn, num_layers, dropout_rate = 0.2):
+        
         super(LanguageModel, self).__init__()
+        # Hyperparamters
         self.rnn_layers = num_layers
         self.dim_rnn = dim_rnn
         self.num_layers = num_layers
         
+        # Layers
         self.dropout = nn.Dropout(dropout_rate)
         self.word_lut = nn.Embedding(voc_size + 1, dim_word, padding_idx=0)
         self.lstm = nn.LSTM(dim_word, dim_rnn, num_layers, dropout=dropout_rate)
         self.output = nn.Linear(dim_rnn, voc_size + 1)
         self.logprob = nn.LogSoftmax()
-
-        self.val_loss = 100
-        self.epoch_idx = 0
-        self.batch_idx = 0
-        self.val_ppl = math.exp(self.val_loss)
+        
+        # Model train status
+        self.train_info = {}
+        self.train_info['val loss'] = 100
+        self.train_info['train loss'] = 100
+        self.train_info = ['epoch idx'] = 0
+        self.train_info = ['batch idx'] = 0
+        self.train_info['val ppl'] = math.exp(self.val_loss)
+        
+        # Dictionary for token to index
         self.dictionary = None
-
-
-    def init_weights(self, std = 0.1):
-        #self.word_lut.weight.data.normal_(mean=0, std=std)
-        self.output.weight.data.normal_(mean=0, std=std)
 
 
     def forward(self, inputs, lengths):
@@ -47,6 +50,4 @@ class LanguageModel(nn.Module):
         return output_flat 
 
 
-    def init_hidden(self, batch_size):
-        return Variable(torch.zeros(self.num_layers, batch_size, self.dim_rnn))
 
