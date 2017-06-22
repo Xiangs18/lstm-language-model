@@ -45,10 +45,10 @@ Evaluate performance of trained model
 
 Parameters | Description
 -- | --
---eval_data, Evaluate data path, default='./data/penn/test.txt' 
---model, Model, default='model/penn-lm.best.pt' 
---batch_size, Batch size, defalut=64
---cuda, Set if use GPU
+--eval_data| Evaluate data path, default='./data/penn/test.txt' 
+--model| Model, default='model/penn-lm.best.pt' 
+--batch_size| Batch size, defalut=64
+--cuda| Set if use GPU
 
 
 
