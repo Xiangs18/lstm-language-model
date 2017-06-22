@@ -1,1 +1,6 @@
-# This is a example to show how to train the language model
+# Example
+
+Preprocess : preprocess_ptb.sh
+Train : train_ptb.sh
+Evaluate : eval_ptb.sh
+
