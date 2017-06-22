@@ -98,6 +98,7 @@ class DataSet:
     def index_token(self):
         #Convert tokens to integers
         print('Index tokens ...')
+        self.sentence = []
         zero_sentence = 0
         long_sentence = 0
         with open(self.datapath, 'r') as f:

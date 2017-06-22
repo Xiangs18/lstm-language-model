@@ -230,7 +230,8 @@ def train(opt):
         print('Epoch %d finished, spend %d s'%(epoch_idx + 1,time.time() - epoch_start_time))
 
         # Update lr if needed
-        #lr *= opt.lr_decay
+        lr *= opt.lr_decay
+        optimizer = getattr(optim,opt.optimizer)(model.parameters(), lr=lr)
         
 
     # Finish training
@@ -241,10 +242,10 @@ def train(opt):
     print_line()
     print('Best model:')
     print('Epoch : %d, Batch : %d ,Loss : %f, Perplexity : %f'%(
-        best_model['epoch_idx'],
-        best_model['batch_idx'], 
-        best_model['val_loss'], 
-        best_model['val_ppl']))
+        best_model['epoch idx'],
+        best_model['batch idx'], 
+        best_model['val loss'], 
+        best_model['val ppl']))
     print_line('-')
     
 
