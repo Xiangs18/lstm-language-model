@@ -18,23 +18,24 @@ Training language model
 
 Parameters | Description
 -- | --
---train_data | default= './data/penn/train.txt.prep.train.pt' 
---val_data | default= './data/penn/valid.txt.prep.val.pt' 
---model_name | default= 'model/exp8-lstm-lm' 
---dim_word | default= 200 
---dim_rnn  | default= 200
---num_layers | default= 2 
---batch_size | default= 64 
---val_batch_size | default= 64 
---epoch | default= 10 
---optimizer | default= SGD 
---lr | default= 1 
---lr_decay | default= 0.9 
---dropout_rate | default= 0.3 
---display_freq | default= 100 
---save_freq | default= 0
---cuda | default=
---clip | default= 5 
+--train_data | Training data path, default= './data/penn/train.txt.prep.train.pt' 
+--val_data | Validate data path, default= './data/penn/valid.txt.prep.val.pt' 
+--model_name | Model name, default= 'model/exp8-lstm-lm' 
+--dim_word | Dimension of word embedding, default= 200 
+--dim_rnn  | Dimension of LSTM (or RNN), default= 200
+--num_layers | Number of layer os LSTM(or RNN), default= 2 
+--batch_size | Training batch size, default= 64 
+--val_batch_size | Validate batch size, default= 64 
+--epoch | Maximum epoch, default= 10 
+--optimizer | Optimizer type [SGD, Adam, Adadelta], default= SGD 
+--lr | Learning rate, default= 1 
+--lr_decay | Learning rate decay for every epoch, default= 0.9 
+--clip | Clip gradient to prevent gradient explode, default= 5 
+--dropout_rate | Dropout rate, default= 0.3 
+--display_freq | Display progress every several batches, default= 100 
+--save_freq | Save the model every several batches, default= 0
+--cuda | Set if use gpu
+
 ## evaluate.py
 Evaluate performance of trained model
 
