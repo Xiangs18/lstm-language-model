@@ -21,6 +21,7 @@ Parameters | Description
 --train_data | Training data path, default= './data/penn/train.txt.prep.train.pt' 
 --val_data | Validate data path, default= './data/penn/valid.txt.prep.val.pt' 
 --model_name | Model name, default= 'model/exp8-lstm-lm' 
+--reload_name | Training from a existing model
 --dim_word | Dimension of word embedding, default= 200 
 --dim_rnn  | Dimension of LSTM (or RNN), default= 200
 --num_layers | Number of layer os LSTM(or RNN), default= 2 
