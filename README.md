@@ -1,5 +1,8 @@
 # lstm-language-model
 Implementation of LSTM language model using PyTorch
+
+There is a example for Penn Treebank dataset
+
 ## preprocess.py
 Preprocess the data before training and evaluate and save the data into a PyTorch data structure. \\
 Nececcary before training\\
@@ -40,8 +43,12 @@ Parameters | Description
 ## evaluate.py
 Evaluate performance of trained model
 
-## model
-RNN model : LSTM, RNN, GRU
-(TODO) n-gram model
+Parameters | Description
+-- | --
+--eval_data, Evaluate data path, default='./data/penn/test.txt' 
+--model, Model, default='model/penn-lm.best.pt' 
+--batch_size, Batch size, defalut=64
+--cuda, Set if use GPU
 
-An LSTM language model is in example
+
+
