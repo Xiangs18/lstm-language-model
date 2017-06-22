@@ -7,10 +7,12 @@ from torch.autograd import Variable
 from collections import OrderedDict
 import const
 class DataSet:
-    def __init__(self, datapath, batch_size=1, build_dict=False, display_freq=0):
+    def __init__(self, datapath, batch_size=1, build_dict=False, display_freq=0, max_len=100, trunc_len=100):
+        
         self.dictionary = {}
         self.frequency = {}
         self.sentence = []
+        
         self.batch_size = batch_size
         self.datapath = datapath
         self.num_batch = 0
@@ -19,6 +21,9 @@ class DataSet:
         self.shuffle_level = 2
         self.display_freq = display_freq
         self.max_dict = 50000
+        self.max_len = max_len
+        assert trunc_len <= max_len, 'trunc length should be smaller than maximum lenth'
+        self.trunc_len = trunc_len
         print('='*89)
         print('Loading data from %s ...'%datapath)
         
@@ -93,17 +98,28 @@ class DataSet:
     def index_token(self):
         #Convert tokens to integers
         print('Index tokens ...')
+        ignore = 0 
         with open(self.datapath, 'r') as f:
             for count, line in enumerate(f):
+                
                 if self.display_freq > 0 and count % self.display_freq == 0:
                     print('%d  sentence processed'%(count))
-                tokens = line.split() + ['<eos>']
-                self.num_tokens += len(tokens)
-                sequence = [self.dictionary[token] if token in self.dictionary else self.dictionary['<unk>'] for token in tokens]
-                self.sentence.append(torch.LongTensor(sequence))
                 
+                tokens = [const.BOS_WORD] + line.split() + [const.EOS_WORD]
+                
+                if len(tokens) == 2 or (len(tokens) > max_len and self.trunc_len == 0):
+                    ignore += 1
+                else:
+                    if len(tokens) > max_len and self.trunc_len > 0:
+                        tokens = tokens[:self.trunc_len]
+
+                    self.num_tokens += len(tokens)
+                    sequence = [self.dictionary[token] if token in self.dictionary else self.dictionary[const.UNK_WORD] for token in tokens]
+                    self.sentence.append(torch.LongTensor(sequence))
+    
         self.num_batch = int(len(self.sentence) / self.batch_size)
         self.index = range(self.num_batch)
+        print('%d sentences were processed, %d were ignored because zero length or longer than maximum length'%(len(self.sentence, ignore)))
         self.describe_dataset()
         print('Done.')
 
