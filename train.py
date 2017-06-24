@@ -60,8 +60,8 @@ def train(opt):
         train_dataset.change_dict(model.dictionary)
         val_dataset.change_dict(model.dictionary)
      
-    model_start_epoch = model.train_info['epoch idx']
-    model_start_batch = model.train_info['batch idx']
+    model_start_epoch = model.train_info['epoch idx'] - 1
+    model_start_batch = model.train_info['batch idx'] - 1
     
     # Use GPU / CPU
     print_line()
