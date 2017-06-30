@@ -296,7 +296,7 @@ if __name__ == '__main__':
 
     print_line()
     print('Configurations')
-    for arg, value in vars(opt).iteritems():
+    for arg, value in vars(opt).items():
         print(arg, value)
     
     train(opt)

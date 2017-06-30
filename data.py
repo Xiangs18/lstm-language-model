@@ -84,7 +84,7 @@ class DataSet:
         print('Save dictionary at %s.dict'%self.datapath)
 
         with open(self.datapath + '.dict', 'w+') as f:
-            for token, number in self.dictionary.iteritems():
+            for token, number in self.dictionary.items():
                 f.write('%s %d\n'%(token,number))
 
         self.index_token()
