@@ -1,6 +1,6 @@
 #!/bin/bash
 source /export/b18/xma/virtual/PyTorch/bin/activate
-LM_PATH='/export/b18/xma/machine_translation/lstm-language-model'
+LM_PATH='..'
 python $LM_PATH/preprocess.py \
   --train_data './data/penn/train.txt' \
   --val_data './data/penn/valid.txt' \

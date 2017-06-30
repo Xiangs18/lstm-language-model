@@ -22,6 +22,7 @@ class DataSet:
         self.display_freq = display_freq
         self.max_dict = 50000
         self.max_len = max_len
+        
         assert trunc_len <= max_len, 'trunc length should be smaller than maximum lenth'
         self.trunc_len = trunc_len
         print('='*89)
@@ -43,16 +44,20 @@ class DataSet:
 
 
     def build_dict(self, save_as_text=True):
+        
         print('Building dictionary...')
+        
         with open(self.datapath, 'r') as f:
             self.num_tokens = 0
             self.num_vocb = 0
             
             for count, line in enumerate(f):
+                
                 if self.display_freq > 0 and count % self.display_freq == 0:
                     print('%d sentence processed'%(count))
 
                 tokens = [const.BOS_WORD] + line.split() + [const.EOS_WORD]
+                
                 for token in tokens:
                     if token not in self.frequency:
                         self.frequency[token] = 1 
@@ -65,6 +70,7 @@ class DataSet:
             self.frequency[const.BOS_WORD] = 4 - const.BOS + max_freq
             self.frequency[const.EOS_WORD] = 4 - const.EOS + max_freq 
             self.frequency[const.PAD_WORD] = 4 - const.PAD + max_freq
+
             self.frequency = OrderedDict(sorted(self.frequency.items(), key=lambda x : x[1], reverse=True))
             
             if self.num_vocb > self.max_dict:
@@ -107,9 +113,9 @@ class DataSet:
                 if self.display_freq > 0 and count % self.display_freq == 0:
                     print('%d  sentence processed'%(count))
                 
-                tokens = [const.BOS_WORD] + line.split() + [const.EOS_WORD]
+                tokens = line.split()
                 
-                if len(tokens) == 2:
+                if len(tokens) == 0:
                     zero_sentence += 1
                 else:
                     if len(tokens) > self.max_len:
@@ -118,10 +124,11 @@ class DataSet:
                             tokens = tokens[:self.trunc_len]
                         else:
                             continue
-
-                    self.num_tokens += len(tokens)
+                    
+                    self.num_tokens += len(tokens) - 2
+                    tokens = [const.BOS_WORD] + tokens + [const.EOS_WORD]
                     sequence = [self.dictionary[token] if token in self.dictionary else self.dictionary[const.UNK_WORD] for token in tokens]
-                    self.sentence.append(torch.LongTensor(sequence))
+                    self.sentence.append(sequence)
     
         self.num_batch = int(len(self.sentence) / self.batch_size)
         self.index = range(self.num_batch)
@@ -131,7 +138,7 @@ class DataSet:
 
 
     def get_batch(self, batch_idx):
-        lengths = [self.sentence[x].size(0) for x in range(self.batch_size * batch_idx, self.batch_size * (batch_idx + 1))]
+        lengths = [len(self.sentence[x]) for x in range(self.batch_size * batch_idx, self.batch_size * (batch_idx + 1))]
         max_len = max(lengths)
         total_len = sum(lengths)
 
@@ -149,8 +156,8 @@ class DataSet:
 
             sequence_idx = idx_ + self.batch_size * batch_idx
             
-            batch_data[: len_, i].copy_(self.sentence[sequence_idx])
-            target_words[ : len_ - 1, i].copy_(self.sentence[sequence_idx][1 : len_])
+            batch_data[: len_ - 1, i].copy_(torch.LongTensor(self.sentence[sequence_idx][: len_ - 1]))
+            target_words[ : len_ - 1, i].copy_(torch.LongTensor(self.sentence[sequence_idx][1 : len_]))
 
         batch_lengths = torch.LongTensor([x[1] for x in sorted_lengths])
 

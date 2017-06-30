@@ -47,6 +47,7 @@ def train(opt):
                 num_layers = opt.num_layers,
                 dropout_rate = opt.dropout_rate
                 )
+        
         model.dictionary = train_dataset.dictionary
         print('Done')
         train_dataset.describe_dataset()
@@ -155,13 +156,6 @@ def train(opt):
             acc_loss += loss.data
             acc_count += batch_lengths.data.sum()
             
-            # Free some memory
-            del output_flat
-            del loss
-            del batch_data
-            del batch_lengths
-            del target_words
-
             # Display progress
             if batch_idx % opt.display_freq == 0:
                 average_loss = acc_loss[0] / acc_count

@@ -1,14 +1,14 @@
 #!/bin/bash
 source /export/b18/xma/virtual/PyTorch/bin/activate
 GPU=`/home/pkoehn/statmt/bin/free-gpu`
-LM_PATH='/export/b18/xma/machine_translation/lstm-language-model/'
+LM_PATH='..'
 echo Using GPU $GPU
 CUDA_VISIBLE_DEVICES=$GPU python -u $LM_PATH/train.py \
   --train_data './data/penn/train.txt.prep.train.pt' \
   --val_data './data/penn/valid.txt.prep.val.pt' \
   --model_name 'model/exp8-lstm-lm' \
-  --dim_word 200 \
-  --dim_rnn  200\
+  --dim_word 512 \
+  --dim_rnn  1000\
   --num_layers 2 \
   --batch_size 64 \
   --val_batch_size 64 \
